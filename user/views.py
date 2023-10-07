@@ -8,6 +8,10 @@ from django.http import JsonResponse
 from products_app.models import *
 import json
 import datetime
+from .utility import CookieCart ,CartData ,GuestOrder
+
+
+
 # Create your views here.
 def register(request):
     if request.method=='POST':
@@ -22,24 +26,15 @@ def register(request):
     }
     return render(request,'user/signup.html',context)
 
+def logout(request):
+    return render(request,'user/logout.html')
 
-
-@login_required(login_url='user-login')  
 def cart(request):
-    
-    # if 'product_id' in request.GET and 'quantity' in request.GET and 'product_price' in request.GET :
-    #    return redirect('/index/'+ request.GET['product_id'])
-    #else:
-    #first get the customer and then get or create the order for this custemoer
-   if request.user.is_authenticated:
-     customer=request.user.custommer
-     ord,created=order.objects.get_or_create(customer=customer,complete=False)
-     #then  we need to get all the items in that order by 
-     items=ord.order_items.all()
-     cartitemCoount=ord.get_Total_items
-   else:
-     items=[]
-       
+   
+   CookieData=CartData(request)
+   cartitemCoount=CookieData['cartitemCoount']
+   ord=CookieData['ord']
+   items=CookieData['items']
    context={
          'items':items,
          'order':ord,
@@ -48,8 +43,23 @@ def cart(request):
 
    return render(request,'user/cart.html',context)
 
-@login_required(login_url='user-login')     
+   
 def updateItem(request):
+#process in UpdateItem API 
+   # 1-From the Fetch API That is  Sending The Product Id and The action Type
+   # when updated-cart class clicked (index.html or checkout.html)
+   # 2-get all the data by json.loads(request.body) function
+   # 3-get product id  
+   # 4-get action
+   # 5-get the custommer name by the current user
+   # 6-get the order  match the custommer name
+   # 7-get the order items by order and the product that is match
+   #  if there is no one with that product  order order create new one by------> get_or_create  method
+   # 8-if action == add increase the quantity of the item by one
+   # if remove decrease it by one 
+   # 9-save the process in the database
+   # 10-return JsonResponse("Item Added succesfully....",safe=False)
+   
    data=json.loads(request.body)
    product_id=data['productId']
    action=data['action']
@@ -67,39 +77,28 @@ def updateItem(request):
    orderItems.save()    
    if orderItems.quantity <=0:
       orderItems.delete()    
-        
-   
-   return JsonResponse("Item Added succesfully....",safe=False)
-   
 
+   return JsonResponse("Item Added succesfully....",safe=False)
+
+
+
+from django.views.decorators.csrf import csrf_exempt   
+@csrf_exempt
 def checkout(request):
-    if request.user.is_authenticated:
-       customer=request.user.custommer
-       ord,created=order.objects.get_or_create(customer=customer,complete=False)
-       items=ord.order_items.all()
-       #then  we need to get all the items in that order by 
-       cartitemCoount=ord.get_Total_items
-      
-       total=ord.get_Total_order_price
-       shippingg=ord.shipping
-    else:
-       items=[]
-       ordere={'get_Total_items':0,'get_Total_order_price':0,'shipping':False}
-       cartitemCoount=ordere['get_Total_items']
-       total=ordere['get_Total_order_price']
-       shippingg=ordere['shipping']
-    context={
+   CookieData=CartData(request)
+   cartitemCoount=CookieData['cartitemCoount']
+   ord=CookieData['ord']
+   items=CookieData['items']
+   context={
        'cartitemCoount':cartitemCoount,
        'items':items,
-       'get_Total_order_price':total,
-       'shipping':shippingg,
-       
+       'ord':ord,
     }
-    return render(request,'user/checkout.html',context)    
+   return render(request,'user/checkout.html',context)    
 
 
-def logout(request):
-    return render(request,'user/logout.html')
+# Saving The Shipping Inforamtion (address ,city ,total .....) Into The DataBase 
+@csrf_exempt
 def ProcessOrder(request):
    transaction_id=datetime.datetime.now().timestamp()
    data=json.loads(request.body)
@@ -107,23 +106,22 @@ def ProcessOrder(request):
    if request.user.is_authenticated:
       customer=request.user.custommer
       ord,created=order.objects.get_or_create(customer=customer,complete=False)
-      total=float(data['form']['total'])
-      ord.transactio_id=transaction_id
-      if (total==ord.get_Total_order_price):
-         ord.complete=True
-   
-      ord.save()
-      if ord.shipping==True:
-         ShppingAdress.objects.create(
-            customer=customer,
-            order=ord,
-            address=data['shipping']['Address'],
-            City=data['shipping']['city'],
-            State=data['shipping']['state'],
-            zibcode=data['shipping']['zibecode'],
-         )
-      
    else:
-      print('user didnt log..')   
+      ord,customer=GuestOrder(request ,data)
+      print('user didnt log..11')  
 
+   total=data['form']['total']
+   ord.transactio_id=transaction_id
+   if (total==ord.get_Total_order_price):
+      ord.complete=True
+   ord.save()
+   if ord.shipping==True:
+      ShppingAdress.objects.create(
+         customer=customer,
+         order=ord,
+         Address=data['shipping']['address'],
+         City=data['shipping']['city'],
+         State=data['shipping']['state'],
+         zip_code=data['shipping']['zibcode'],
+      )
    return JsonResponse('Payement Complete....',safe=False)
