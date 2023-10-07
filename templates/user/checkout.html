@@ -8,6 +8,7 @@
   <div class="col-lg-6">
     <div class="box-element" id="form-wrapper">
       <form id="form">
+        <!-- {% csrf_token %} -->
         <div id="user-info">
           <div class="form-field">
             <input required class="form-control" type="text" name="name" placeholder="Name..">
@@ -46,7 +47,8 @@
     <br>
     <div class="box-element hidden" id="payment-info">
       <small>Paypal Options</small>
-      <button id="make-payment">Make payment</button>
+      <div id="paypal-button-container"></div>
+      <!-- <button id="make-payment">Make payment</button> -->
     </div>
     
   </div>
@@ -61,25 +63,69 @@
       <div class="cart-row">
         <div style="flex:2"><img class="row-image" src="{{item.product.PRDimage.url}}"></div>
         <div style="flex:2"><p>{{item.product.PRDName}}</p></div>
-        <div style="flex:1"><p>${{item.product.PRDPric|floatformat:2}}</p></div>
+        <div style="flex:1"><p>${{item.product.ADPric|floatformat:2}}</p></div>
         <div style="flex:1"><p>x{{item.quantity}}</p></div>
       </div>
       {% endfor %}
       <h5>Items:   {{cartitemCoount}}</h5>
-      <h5>Total:   ${{get_Total_order_price|floatformat:2}}</h5>
+      <h5>Total:   ${{ord.get_Total_order_price|floatformat:2}}</h5>
     </div>
   </div>
 </div>
+
+<!-- paypal javascript  -->
+<script src="https://www.paypal.com/sdk/js?client-id=
+ATIQcsnoNw8nv5NjV6Dqh1wp1Z5v9r7z-8V9BO3T
+MgCIfgZ1bFfD-4Cv5TLPgAV7DnqnAw9-PTpzVOH7&currency=USD"></script>
+<script>
+  var total='ord.get_Total_order_price'
+  // Render the PayPal button into #paypal-button-container
+  paypal.Buttons({
+
+    style: {
+          color:  'blue',
+          shape:  'rect',
+      },
+
+      // Set up the transaction
+      createOrder: function(data, actions) {
+          return actions.order.create({
+              purchase_units: [{
+                  amount: {
+                      value:parseFloat(total).toFixed(2),
+                  }
+              }]
+          });
+      },
+
+      // Finalize the transaction
+      onApprove: function(data, actions) {
+          return actions.order.capture().then(function(details) {
+            SubmitFormData();
+          });
+      }
+
+  }).render('#paypal-button-container');
+</script>
+
+
 <script type="text/javascript">
+
+
+
+
+// this is the process of submitting The Shipping information (address , city , state zibecode ,)
    var user='{{request.user}}'
-   var total='get_Total_order_price|floatformat:2'
+   
    var shipping='{{shipping}}'
    if (shipping=='False'){
       document.getElementById('shipping-info').innerHTML =''
-   }
+   }  
 
 
    var form=document.getElementById('form')
+  //  csrftoken=form.getElementsByTagName('input')[0].value
+  //  console.log('newtoken',form.getElementsByTagName('input')[0].value)
    form.addEventListener('submit',function(e){
      e.preventDefault()
      console.log("Button Submitted...")
@@ -89,9 +135,9 @@
 
 
 
-   document.getElementById('make-payment').addEventListener('click',function(e){
-    SubmitFormData()
-   })
+  //  document.getElementById('make-payment').addEventListener('click',function(e){
+  //   SubmitFormData()
+  //  })
    function paymentProcess(){
     console.log('Payment Clicked..')
     
@@ -130,12 +176,15 @@
         shippingInfo.address=form.address.value
         shippingInfo.city=form.city.value
         shippingInfo.state=form.state.value
-        shippingInfo.zibcode=form.zibcode.value
+        shippingInfo.zibcode=form.zipcode.value
 
       }
-      if(user =='AnonumousUser'){
+      if(user =='AnonymousUser'){
+        console.log(user)
         userFormData.name=form.name.value
+        console.log(userFormData.name)
         userFormData.email=form.email.value
+        console.log(userFormData.email)
       }
       var urls='http://127.0.0.1:8000/user/ProcessOrder/'
       fetch(urls, {
@@ -151,10 +200,14 @@
       })
       })
       .then((response)=> response.json())
-      
+
+
       .then((data) => {
         console.log('Success',data)
         alert('Transaction Completed..')
+        cart = {}
+        console.log('Cart deleted!', cart)
+        document.cookie ='cart=' + JSON.stringify(cart) + ";domain=;path=/"
         window.location.href="{% url 'index' %}"
       })
       console.log('Payment Button Clicked..')

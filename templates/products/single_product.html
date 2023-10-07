@@ -56,14 +56,14 @@
 
           <p>{{singlproduct.PRDDescription}}</p>
         
-          <form class="d-flex justify-content-left" method="post" action="{% url 'cart' %}">
+          <form class="d-flex justify-content-left" method="post" action="">
             {%  csrf_token %}
             <!-- Default input -->
            
             <input type="number" value="1" aria-label="Search" class="form-control" style="width: 100px" name="quantity">
             <input type="hidden" name="product_id" value="{{singlproduct.id}}" >
             <input type="hidden" name="product_price" value="{{singlproduct.PRDPric}}" >
-            <button   class="btn btn-primary btn-md my-0 p" type="submit">Add to cart
+            <button data-product="{{singlproduct.id}}" data-action="add"  class="btn btn-primary btn-md my-0 p update-cart" type="submit">Add to cart
               <i class="fas fa-shopping-cart ml-1"></i>
             </button>
 
@@ -119,5 +119,73 @@
 
   </div>
 </main>
+<script>
+  var updateBtns = document.getElementsByClassName('update-cart')
+for (i = 0; i < updateBtns.length; i++) {
+	
+	updateBtns[i].addEventListener('click', function(){
+		console.log('update-cart clicked')
+		var productId = this.dataset.product
+		var action = this.dataset.action
+		console.log('productId:', productId, 'Action:', action)
+		console.log('USER:', user)
+
+		if (user == 'AnonymousUser'){
+			addToCookie(productId, action);
+			
+		}else{
+			updateUserOrder(productId, action)
+		}
+	})
+}
+
+function addToCookie(productId, action){
+	if (action=='add'){
+		if (cart[productId]== undefined){
+			cart[productId] ={'quantity':1};
+		}
+		else{
+			cart[productId]['quantity'] +=1;
+		}
+
+	}
+
+	if(action=='remove'){
+		cart[productId]['quantity'] -=1;
+		if(cart[productId]['quantity'] <=0){
+			console.log('delete item');
+			delete cart[productId]
+		}
+	}
+
+	console.log('cart',cart);
+	// update the cart in Cookei
+	document.cookie ='cart=' + JSON.stringify(cart) + ";domain=;path=/"
+	location.reload()
+}
+
+function updateUserOrder(productId, action){
+	console.log('User is authenticated, sending data...')
+
+		var url = 'http://127.0.0.1:8000/user/UpdateItem/'
+
+		fetch(url, {
+			method:'POST',
+			headers:{
+				'Content-Type':'application/json',
+				'X-CSRFToken':csrftoken,
+			}, 
+			body:JSON.stringify({'productId':productId, 'action':action})
+		})
+		.then((response) => {
+		   return response.json();
+		})
+		.then((data) => {
+		    location.reload()
+		});
+}
+
+
+</script>
 <!--Main layout-->
 {%  endblock %}

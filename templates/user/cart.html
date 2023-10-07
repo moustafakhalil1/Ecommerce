@@ -2,8 +2,6 @@
 {% load static %}
 {% block content %}
 
-
-
 <br>
 <br>
 <div class="container">>
@@ -11,7 +9,7 @@
   <div class="col-lg-12">
     <div class="box-element">
 
-      <a  class="btn btn-outline-dark" href="#">&#x2190; Continue Shopping</a>
+      <a  class="btn btn-outline-dark" href="{%  url 'index' %}">&#x2190; Continue Shopping</a>
 
       <br>
       <br>
@@ -47,7 +45,7 @@
           <p class="quantity">{{item.quantity}}</p>
           <div class="quantity">
             <img data-product="{{item.product.id}}"  data-action="add" class="chg-quantity update-cart" src="{% static 'img/arrow-up.png' %}">
-        
+
             <img data-product="{{item.product.id}}"  data-action="remove"  class="chg-quantity update-cart" src="{% static 'img/arrow-down.png' %}">
           </div>
         </div>
@@ -59,4 +57,72 @@
   </div>
 </div>
 </div>
+<script>
+  var updateBtns = document.getElementsByClassName('update-cart')
+for (i = 0; i < updateBtns.length; i++) {
+	
+	updateBtns[i].addEventListener('click', function(){
+		console.log('update-cart clicked')
+		var productId = this.dataset.product
+		var action = this.dataset.action
+		console.log('productId:', productId, 'Action:', action)
+		console.log('USER:', user)
+
+		if (user == 'AnonymousUser'){
+			addToCookie(productId, action);
+			
+		}else{
+			updateUserOrder(productId, action)
+		}
+	})
+}
+
+function addToCookie(productId, action){
+	if (action=='add'){
+		if (cart[productId]== undefined){
+			cart[productId] ={'quantity':1};
+		}
+		else{
+			cart[productId]['quantity'] +=1;
+		}
+
+	}
+
+	if(action=='remove'){
+		cart[productId]['quantity'] -=1;
+		if(cart[productId]['quantity'] <=0){
+			console.log('delete item');
+			delete cart[productId]
+		}
+	}
+
+	console.log('cart',cart);
+	// update the cart in Cookei
+	document.cookie ='cart=' + JSON.stringify(cart) + ";domain=;path=/"
+	location.reload()
+}
+
+function updateUserOrder(productId, action){
+	console.log('User is authenticated, sending data...')
+
+		var url = 'http://127.0.0.1:8000/user/UpdateItem/'
+
+		fetch(url, {
+			method:'POST',
+			headers:{
+				'Content-Type':'application/json',
+				'X-CSRFToken':csrftoken,
+			}, 
+			body:JSON.stringify({'productId':productId, 'action':action})
+		})
+		.then((response) => {
+		   return response.json();
+		})
+		.then((data) => {
+		    location.reload()
+		});
+}
+
+
+</script>
 {% endblock %}

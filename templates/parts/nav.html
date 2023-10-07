@@ -38,16 +38,7 @@
             <span class="clearfix d-none d-sm-inline-block"> Cart </span>
           </a>
         </li>
-        <li class="nav-item">
-          <a href="https://www.facebook.com/mdbootstrap" class="nav-link waves-effect" target="_blank">
-            <i class="fab fa-facebook-f"></i>
-          </a>
-        </li>
-        <li class="nav-item">
-          <a href="https://twitter.com/MDBootstrap" class="nav-link waves-effect" target="_blank">
-            <i class="fab fa-twitter"></i>
-          </a>
-        </li>
+     
         {% if user.is_authenticated %}
         <li class="nav-item active">
           <a class="nav-link waves-effect" href="{% url 'logout-user' %}">Logout
@@ -57,7 +48,7 @@
 
         
         {% else %}
-        <li class="nav-item active">
+        <li class="nav-item active" style="border-radius: 50%; padding-right: 5px;">
           <a class="nav-link waves-effect" href="{% url 'user-login' %}">Login
             <span class="sr-only">(current)</span>
           </a>
