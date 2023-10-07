@@ -1,3 +1,3 @@
-# Ecommerce With Pytho-Djang FrameWork 
+# Ecommerce With Python-Djang FrameWork 
 (Html,css ,javascript,boostrap ,Django) 
 Ecommerce Management System with Full Functionality
